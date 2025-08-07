@@ -62,7 +62,14 @@ def get_elevenlabs_voices():
         return []
 
 def parse_timecode(time_str):
-    """Parse timecode in format hh:mm:ss:ff, hh:mm:ss.ff, or decimal seconds"""
+    """Parse timecode in format hh:mm:ss:ff, hh:mm:ss.000, or decimal seconds
+    
+    Supported formats:
+    - 00.167 (decimal seconds)
+    - 00:00:00 (hours:minutes:seconds)
+    - 00:00:00:00 (hours:minutes:seconds:frames)
+    - 00:00:00.000 (hours:minutes:seconds.milliseconds)
+    """
     # Convert to string and strip whitespace
     time_str = str(time_str).strip()
     
@@ -75,10 +82,20 @@ def parse_timecode(time_str):
                 total_seconds = hours * 3600 + minutes * 60 + seconds + frames / 30.0
             except (ValueError, TypeError):
                 return 0
-        elif len(parts) == 3:  # hh:mm:ss format
+        elif len(parts) == 3:  # hh:mm:ss or hh:mm:ss.000 format
             try:
-                hours, minutes, seconds = map(int, parts)
-                total_seconds = hours * 3600 + minutes * 60 + seconds
+                hours, minutes = map(int, parts[:2])
+                seconds_part = parts[2]
+                
+                # Check if seconds part contains milliseconds
+                if '.' in seconds_part:
+                    seconds, milliseconds = seconds_part.split('.')
+                    seconds = int(seconds)
+                    milliseconds = float('0.' + milliseconds)
+                    total_seconds = hours * 3600 + minutes * 60 + seconds + milliseconds
+                else:
+                    seconds = int(seconds_part)
+                    total_seconds = hours * 3600 + minutes * 60 + seconds
             except (ValueError, TypeError):
                 return 0
         else:

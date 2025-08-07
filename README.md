@@ -98,8 +98,12 @@ CSV Timeline/
 
 Your CSV file should contain the following columns:
 - `speaker`: Speaker name
-- `start_time`: Start time in format hh:mm:ss or hh:mm:ss:ff
-- `end_time`: End time in format hh:mm:ss or hh:mm:ss:ff
+- `start_time`: Start time in one of these formats:
+  - `00.167` (decimal seconds)
+  - `00:00:00` (hours:minutes:seconds)
+  - `00:00:00:00` (hours:minutes:seconds:frames)
+  - `00:00:00.000` (hours:minutes:seconds.milliseconds)
+- `end_time`: End time in the same format as start_time
 - One column containing script/transcription text (will be auto-detected)
 
 ## License
