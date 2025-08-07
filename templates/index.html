@@ -1,0 +1,2220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Timeline Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2d2d2d;
+            padding: 15px 20px;
+            border-bottom: 2px solid #404040;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #00d4ff;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .transport-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .transport-btn {
+            background: #404040;
+            color: #ffffff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .transport-btn:hover:not(:disabled) {
+            background: #505050;
+            transform: translateY(-1px);
+        }
+
+        .transport-btn:disabled {
+            background: #2d2d2d;
+            color: #666666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .transport-btn.active {
+            background: #00d4ff;
+            color: #000000;
+        }
+
+        .upload-section {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn {
+            background: #00d4ff;
+            color: #000000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #00b8e6;
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: #666666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .app-container {
+            height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-container {
+            display: flex;
+            height: 50%;
+        }
+
+        .left-panel {
+            width: 66.66%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .script-panel {
+            height: 100%;
+            background: #2d2d2d;
+            border-right: 1px solid #404040;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: #404040;
+            padding: 15px 20px;
+            font-weight: 600;
+            color: #00d4ff;
+            border-bottom: 1px solid #555555;
+        }
+
+        .script-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .segment-item {
+            background: #3d3d3d;
+            border: 1px solid #555555;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .segment-item:hover {
+            border-color: #00d4ff;
+            background: #454545;
+        }
+
+        .segment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .segment-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .segment-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .segment-speaker {
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 4px;
+        }
+
+        .segment-speaker-dropdown {
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .segment-speaker-dropdown:hover {
+            opacity: 0.8;
+        }
+
+        .segment-speaker-dropdown:focus {
+            outline: 2px solid #00d4ff;
+            outline-offset: 2px;
+        }
+
+        .segment-voice-dropdown {
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 3px;
+            border: 1px solid #555555;
+            background: #2d2d2d;
+            color: #cccccc;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 8px;
+            width: 140px;
+            max-width: 140px;
+        }
+
+        .segment-voice-dropdown:hover {
+            border-color: #00d4ff;
+            background: #404040;
+        }
+
+        .segment-voice-dropdown:focus {
+            outline: 2px solid #00d4ff;
+            outline-offset: 2px;
+        }
+
+        .segment-voice-dropdown option {
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .custom-voice-dropdown {
+            position: relative;
+            display: inline-block;
+            width: 140px;
+            margin-left: 8px;
+        }
+
+        .custom-voice-dropdown-button {
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 3px;
+            border: 1px solid #555555;
+            background: #2d2d2d;
+            color: #cccccc;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-align: left;
+            position: relative;
+        }
+
+        .custom-voice-dropdown-button:hover {
+            border-color: #00d4ff;
+            background: #404040;
+        }
+
+        .custom-voice-dropdown-button:focus {
+            outline: 2px solid #00d4ff;
+            outline-offset: 2px;
+        }
+
+        .custom-voice-dropdown-button::after {
+            content: '▼';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 8px;
+            color: #888888;
+        }
+
+        .custom-voice-dropdown.open .custom-voice-dropdown-button::after {
+            content: '▲';
+        }
+
+        .custom-voice-dropdown-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #2d2d2d;
+            border: 1px solid #555555;
+            border-radius: 3px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .custom-voice-dropdown.open .custom-voice-dropdown-list {
+            display: block;
+        }
+
+        .custom-voice-search {
+            padding: 6px 8px;
+            font-size: 11px;
+            border: none;
+            border-bottom: 1px solid #555555;
+            background: #1a1a1a;
+            color: #ffffff;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .custom-voice-search:focus {
+            outline: none;
+            border-bottom-color: #00d4ff;
+        }
+
+        .custom-voice-option {
+            padding: 6px 8px;
+            font-size: 11px;
+            color: #cccccc;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .custom-voice-option:hover {
+            background: #404040;
+        }
+
+        .custom-voice-option.selected {
+            background: #00d4ff;
+            color: #000000;
+        }
+
+        .custom-voice-option.no-results {
+            color: #888888;
+            font-style: italic;
+            cursor: default;
+        }
+
+        .custom-voice-option.no-results:hover {
+            background: none;
+        }
+
+        .voice-dropdown-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .segment-time {
+            color: #cccccc;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .segment-text {
+            color: #ffffff;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .edit-btn {
+            background: none;
+            border: none;
+            color: #888888;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 3px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .edit-btn:hover {
+            color: #00d4ff;
+            background: #404040;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #888888;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 3px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            color: #ff4444;
+            background: #404040;
+        }
+
+        .segment-text.editing {
+            background: #404040;
+            border: 1px solid #00d4ff;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 4px 0;
+        }
+
+        .segment-text textarea {
+            width: 100%;
+            min-height: 60px;
+            background: #2d2d2d;
+            border: none;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+        }
+
+        .right-panel {
+            width: 33.33%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .video-panel {
+            height: 100%;
+            background: #2d2d2d;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .video-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-placeholder {
+            text-align: center;
+            color: #888888;
+        }
+
+        .video-placeholder i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .drag-drop-zone {
+            border: 2px dashed #555555;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            color: #888888;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #1a1a1a;
+        }
+
+        .drag-drop-zone:hover {
+            border-color: #00d4ff;
+            background: #2a2a2a;
+        }
+
+        .drag-drop-zone.drag-over {
+            border-color: #00d4ff;
+            background: #2a2a2a;
+            transform: scale(1.02);
+        }
+
+        .drag-drop-content {
+            pointer-events: none;
+        }
+
+        .drag-drop-content i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .drag-drop-subtitle {
+            font-size: 12px;
+            color: #666666;
+            margin-top: 5px;
+        }
+
+        .timeline-panel {
+            height: 50%;
+            background: #2d2d2d;
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid #555555;
+        }
+
+        .timeline-content {
+            flex: 1;
+            overflow: auto;
+        }
+
+        .timeline-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .timeline-header {
+            display: flex;
+            background: #404040;
+        }
+
+        .timeline-speaker-header {
+            width: 150px;
+            padding: 10px;
+            font-weight: 600;
+            color: #00d4ff;
+            border-right: 1px solid #555555;
+        }
+
+        .timeline-time-header {
+            flex: 1;
+            padding: 10px;
+            font-weight: 600;
+            color: #00d4ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .zoom-btn {
+            background: #404040;
+            color: #ffffff;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .zoom-btn:hover:not(:disabled) {
+            background: #505050;
+        }
+
+        .zoom-btn:disabled {
+            background: #2d2d2d;
+            color: #666666;
+            cursor: not-allowed;
+        }
+
+        .timeline-tracks {
+            flex: 1;
+            background: #1a1a1a;
+            border: 1px solid #404040;
+            position: relative;
+            overflow: auto;
+        }
+
+        .timeline-tracks-container {
+            display: flex;
+            min-width: 100%;
+            position: relative;
+        }
+
+        .timeline-speakers-column {
+            width: 150px;
+            background: #1a1a1a;
+            border-right: 1px solid #404040;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .timeline-content-scrollable {
+            flex: 1;
+            min-width: 1000px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .playhead {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: #ff4444;
+            z-index: 10;
+            pointer-events: all;
+            box-shadow: 0 0 4px rgba(255, 68, 68, 0.6);
+            cursor: ew-resize;
+        }
+
+        .playhead-handle {
+            position: absolute;
+            top: -8px;
+            left: -6px;
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-top: 14px solid #ff4444;
+            cursor: ew-resize;
+            pointer-events: all;
+            z-index: 1000;
+            transition: all 0.2s ease;
+        }
+
+        .playhead-handle:hover {
+            border-top-color: #ff6666;
+            transform: scale(1.1);
+        }
+
+        .playhead-handle:active {
+            border-top-color: #ff8888;
+            transform: scale(1.05);
+        }
+
+        .timeline-track {
+            display: flex;
+            height: 60px;
+            border-bottom: 1px solid #404040;
+        }
+
+        .timeline-track-speaker {
+            width: 150px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            border-right: 1px solid #404040;
+            border-bottom: 1px solid #404040;
+            background: #1a1a1a;
+            height: 60px;
+        }
+
+        .timeline-track-content {
+            flex: 1;
+            position: relative;
+            background: #1a1a1a;
+            min-width: 1000px;
+            height: 60px;
+            border-bottom: 1px solid #404040;
+        }
+
+        .timeline-segment {
+            position: absolute;
+            height: 40px;
+            margin: 10px 5px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border-radius: 4px;
+            user-select: none;
+        }
+
+        .timeline-segment:hover {
+            transform: scale(1.02);
+            filter: brightness(1.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .timeline-segment:active {
+            transform: scale(0.98);
+        }
+
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            width: 8px;
+            height: 100%;
+            cursor: ew-resize;
+            background: transparent;
+            border: none;
+            z-index: 10;
+            transition: background 0.2s ease;
+        }
+
+        .timeline-segment:hover .resize-handle {
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .resize-handle:hover {
+            background: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        .resize-handle.left-handle {
+            left: 0;
+            border-radius: 2px 0 0 2px;
+        }
+
+        .resize-handle.right-handle {
+            right: 0;
+            border-radius: 0 2px 2px 0;
+        }
+
+        .timeline-segment.resizing {
+            z-index: 20;
+        }
+
+        .error-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff4444;
+            color: #ffffff;
+            padding: 15px 20px;
+            font-size: 14px;
+            border-radius: 6px;
+            z-index: 1001;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .success-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #44ff44;
+            color: #000000;
+            padding: 15px 20px;
+            font-size: 14px;
+            border-radius: 6px;
+            z-index: 1001;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #2d2d2d;
+            border: 2px solid #404040;
+            padding: 30px;
+            border-radius: 8px;
+            z-index: 1000;
+            text-align: center;
+            color: #00d4ff;
+            min-width: 200px;
+        }
+
+        .spinner {
+            border: 3px solid #404040;
+            border-top: 3px solid #00d4ff;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        .upload-progress {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #cccccc;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #404040;
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #00d4ff;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555555;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CSV Timeline Editor</h1>
+        <div class="transport-controls">
+            <button id="prev-btn" class="transport-btn" disabled>
+                <span>⏮</span>
+            </button>
+            <button id="play-btn" class="transport-btn" disabled>
+                <span id="play-icon">▶</span>
+            </button>
+            <button id="stop-btn" class="transport-btn" disabled>
+                <span>⏹</span>
+            </button>
+            <button id="next-btn" class="transport-btn" disabled>
+                <span>⏭</span>
+            </button>
+        </div>
+        <div class="upload-section">
+            <div id="api-status" style="font-size: 12px; color: #888888; margin-right: 15px; display: none;">
+                <span id="api-status-text"></span>
+            </div>
+            <button id="export-btn" class="btn" disabled>Export CSV</button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <div class="main-container">
+            <div class="left-panel">
+                <div class="script-panel">
+                    <div class="panel-header">Script Segments</div>
+                                    <div class="script-content" id="script-content">
+                    <div class="drag-drop-zone" id="csv-drop-zone">
+                        <div class="drag-drop-content">
+                            <i>📄</i>
+                            <p>Drag and drop CSV file here</p>
+                            <p class="drag-drop-subtitle">or click to browse</p>
+                            <input type="file" id="csv-file-hidden" accept=".csv" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="video-panel">
+                    <div class="panel-header">Video Preview</div>
+                                    <div class="video-content" id="video-content">
+                    <div class="drag-drop-zone" id="video-drop-zone">
+                        <div class="drag-drop-content">
+                            <i>🎬</i>
+                            <p>Drag and drop video file here</p>
+                            <p class="drag-drop-subtitle">or click to browse</p>
+                            <input type="file" id="video-file-hidden" accept="video/*" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="timeline-panel">
+            <div class="panel-header">Timeline</div>
+            <div class="timeline-content">
+                <div class="timeline-container" id="timeline-container">
+                    <div class="video-placeholder">
+                        <i>⏱️</i>
+                        <p>Upload a CSV file to view timeline</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Processing...</p>
+    </div>
+
+    <script>
+        let currentSegments = [];
+        let currentSpeakers = [];
+        let currentVideoFile = null;
+        let currentVideoElement = null;
+        let isPlaying = false;
+        let currentSegmentIndex = -1;
+        let autoScrollInterval = null;
+        let timelineZoom = 1.0; // Will be calculated based on 30-second view
+        let availableVoices = [];
+        let apiKeyConfigured = false;
+        
+        // Pleasant color scheme for speakers (12 colors)
+        const speakerColors = [
+            '#FF6B6B', // Coral Red
+            '#4ECDC4', // Turquoise
+            '#45B7D1', // Sky Blue
+            '#96CEB4', // Mint Green
+            '#FFEAA7', // Soft Yellow
+            '#DDA0DD', // Plum
+            '#98D8C8', // Seafoam
+            '#F7DC6F', // Golden Yellow
+            '#BB8FCE', // Lavender
+            '#85C1E9', // Light Blue
+            '#F8C471', // Orange
+            '#82E0AA'  // Light Green
+        ];
+        
+        // Function to get color for a speaker
+        function getSpeakerColor(speaker) {
+            const speakerIndex = currentSpeakers.indexOf(speaker);
+            if (speakerIndex === -1) return speakerColors[0];
+            return speakerColors[speakerIndex % speakerColors.length];
+        }
+
+        // Transport control functions
+        function togglePlayPause() {
+            if (!currentVideoElement) return;
+            
+            if (isPlaying) {
+                currentVideoElement.pause();
+                isPlaying = false;
+                document.getElementById('play-icon').textContent = '▶';
+                document.getElementById('play-btn').classList.remove('active');
+                stopAutoScroll();
+            } else {
+                currentVideoElement.play();
+                isPlaying = true;
+                document.getElementById('play-icon').textContent = '⏸';
+                document.getElementById('play-btn').classList.add('active');
+                startAutoScroll();
+            }
+        }
+
+        function stopPlayback() {
+            if (!currentVideoElement) return;
+            
+            currentVideoElement.pause();
+            currentVideoElement.currentTime = 0;
+            isPlaying = false;
+            document.getElementById('play-icon').textContent = '▶';
+            document.getElementById('play-btn').classList.remove('active');
+            currentSegmentIndex = -1;
+            stopAutoScroll();
+            updatePlayhead(0);
+        }
+
+        function goToPreviousSegment() {
+            if (currentSegments.length === 0 || !currentVideoElement) return;
+            
+            const currentTime = currentVideoElement.currentTime;
+            
+            // Find the segment that comes before the current playhead position
+            let targetSegment = null;
+            for (let i = currentSegments.length - 1; i >= 0; i--) {
+                const segment = currentSegments[i];
+                if (segment.start_time < currentTime) {
+                    targetSegment = segment;
+                    break;
+                }
+            }
+            
+            // If no previous segment found, go to the last segment
+            if (!targetSegment) {
+                targetSegment = currentSegments[currentSegments.length - 1];
+            }
+            
+            if (targetSegment) {
+                currentVideoElement.currentTime = targetSegment.start_time;
+                updatePlayhead(targetSegment.start_time);
+                if (isPlaying) {
+                    currentVideoElement.play();
+                    startAutoScroll();
+                }
+            }
+        }
+
+        function goToNextSegment() {
+            if (currentSegments.length === 0 || !currentVideoElement) return;
+            
+            const currentTime = currentVideoElement.currentTime;
+            
+            // Find the segment that comes after the current playhead position
+            let targetSegment = null;
+            for (let i = 0; i < currentSegments.length; i++) {
+                const segment = currentSegments[i];
+                if (segment.start_time > currentTime) {
+                    targetSegment = segment;
+                    break;
+                }
+            }
+            
+            // If no next segment found, go to the first segment
+            if (!targetSegment) {
+                targetSegment = currentSegments[0];
+            }
+            
+            if (targetSegment) {
+                currentVideoElement.currentTime = targetSegment.start_time;
+                updatePlayhead(targetSegment.start_time);
+                if (isPlaying) {
+                    currentVideoElement.play();
+                    startAutoScroll();
+                }
+            }
+        }
+
+        function updateTransportControls() {
+            const hasSegments = currentSegments.length > 0;
+            const hasVideo = currentVideoElement !== null;
+            
+            document.getElementById('play-btn').disabled = !hasSegments || !hasVideo;
+            document.getElementById('stop-btn').disabled = !hasSegments || !hasVideo;
+            document.getElementById('prev-btn').disabled = !hasSegments;
+            document.getElementById('next-btn').disabled = !hasSegments;
+        }
+
+        function startAutoScroll() {
+            if (autoScrollInterval) {
+                clearInterval(autoScrollInterval);
+            }
+            
+            autoScrollInterval = setInterval(() => {
+                if (!currentVideoElement || !isPlaying) return;
+                
+                const currentTime = currentVideoElement.currentTime;
+                const scriptContainer = document.getElementById('script-content');
+                const playhead = document.getElementById('timeline-playhead');
+                
+                // Update playhead position
+                if (playhead && currentSegments.length > 0) {
+                    const maxDuration = Math.max(...currentSegments.map(s => s.end_time));
+                    const timelineWidth = 1000 * timelineZoom; // Same as in renderTimeline
+                    const pixelsPerSecond = timelineWidth / maxDuration;
+                    const playheadPosition = currentTime * pixelsPerSecond;
+                    
+                    // Playhead is now inside the scrollable content area, no offset needed
+                    playhead.style.left = `${playheadPosition}px`;
+                }
+                
+                // Find the current segment based on playhead position
+                let currentSegment = null;
+                let currentSegmentIndex = -1;
+                
+                for (let i = 0; i < currentSegments.length; i++) {
+                    const segment = currentSegments[i];
+                    if (currentTime >= segment.start_time && currentTime <= segment.end_time) {
+                        currentSegment = segment;
+                        currentSegmentIndex = i;
+                        break;
+                    }
+                }
+                
+                if (currentSegment && currentSegmentIndex >= 0) {
+                    // Find the segment element in the DOM
+                    const segmentElements = scriptContainer.querySelectorAll('.segment-item');
+                    if (segmentElements[currentSegmentIndex]) {
+                        // Calculate scroll position to keep current segment in second position
+                        const segmentElement = segmentElements[currentSegmentIndex];
+                        const containerHeight = scriptContainer.clientHeight;
+                        const segmentHeight = segmentElement.offsetHeight;
+                        const segmentTop = segmentElement.offsetTop;
+                        
+                        // Target position: current segment positioned in the middle of the container
+                        const targetScrollTop = segmentTop - (containerHeight / 2) + (segmentHeight / 2);
+                        
+                        // Smooth scroll to target position
+                        scriptContainer.scrollTo({
+                            top: targetScrollTop,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            }, 100); // Update every 100ms
+        }
+
+        function stopAutoScroll() {
+            if (autoScrollInterval) {
+                clearInterval(autoScrollInterval);
+                autoScrollInterval = null;
+            }
+        }
+
+        function updatePlayhead(time) {
+            const playhead = document.getElementById('timeline-playhead');
+            if (playhead && currentSegments.length > 0) {
+                const maxDuration = Math.max(...currentSegments.map(s => s.end_time));
+                const timelineWidth = 1000 * timelineZoom; // Same as in renderTimeline
+                const pixelsPerSecond = timelineWidth / maxDuration;
+                const playheadPosition = time * pixelsPerSecond;
+                
+                // Playhead is now inside the scrollable content area, no offset needed
+                playhead.style.left = `${playheadPosition}px`;
+            }
+        }
+
+        function calculateDefaultZoom() {
+            if (currentSegments.length === 0) return 1.0;
+            
+            const maxDuration = Math.max(...currentSegments.map(s => s.end_time));
+            const targetSeconds = 30; // Show 30 seconds by default
+            const timelineWidth = 1000; // Base timeline width
+            
+            // Calculate zoom to show targetSeconds in the timeline width
+            const zoom = Math.min(80.0, Math.max(1, (timelineWidth / targetSeconds) / (timelineWidth / maxDuration)));
+            return zoom;
+        }
+
+        function changeZoom(delta) {
+            const newZoom = Math.max(1, Math.min(80.0, timelineZoom * delta));
+            if (newZoom !== timelineZoom) {
+                timelineZoom = newZoom;
+                renderTimeline();
+            }
+        }
+
+        function getSpeakersInOrder() {
+            const speakerOrder = [];
+            const seenSpeakers = new Set();
+            
+            // Go through segments in chronological order
+            for (const segment of currentSegments) {
+                if (!seenSpeakers.has(segment.speaker)) {
+                    speakerOrder.push(segment.speaker);
+                    seenSpeakers.add(segment.speaker);
+                }
+            }
+            
+            return speakerOrder;
+        }
+
+        async function fetchAvailableVoices() {
+            try {
+                const response = await fetch('/get-voices');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    availableVoices = data.voices || [];
+                    apiKeyConfigured = data.api_key_configured;
+                    
+                    // Update API status display
+                    const apiStatus = document.getElementById('api-status');
+                    const apiStatusText = document.getElementById('api-status-text');
+                    
+                    if (!apiKeyConfigured) {
+                        apiStatus.style.display = 'block';
+                        apiStatusText.textContent = '⚠️ ElevenLabs API key not configured';
+                        apiStatusText.style.color = '#ffaa00';
+                        console.log('ElevenLabs API key not configured. Voice selection will be disabled.');
+                    } else {
+                        apiStatus.style.display = 'block';
+                        apiStatusText.textContent = `✅ ${availableVoices.length} voices available`;
+                        apiStatusText.style.color = '#44ff44';
+                        console.log(`Loaded ${availableVoices.length} voices from ElevenLabs`);
+                    }
+                } else {
+                    console.error('Error fetching voices:', data.error);
+                    availableVoices = [];
+                    apiKeyConfigured = false;
+                    
+                    const apiStatus = document.getElementById('api-status');
+                    const apiStatusText = document.getElementById('api-status-text');
+                    apiStatus.style.display = 'block';
+                    apiStatusText.textContent = '❌ Error loading voices';
+                    apiStatusText.style.color = '#ff4444';
+                }
+            } catch (error) {
+                console.error('Error fetching voices:', error);
+                availableVoices = [];
+                apiKeyConfigured = false;
+                
+                const apiStatus = document.getElementById('api-status');
+                const apiStatusText = document.getElementById('api-status-text');
+                apiStatus.style.display = 'block';
+                apiStatusText.textContent = '❌ Error loading voices';
+                apiStatusText.style.color = '#ff4444';
+            }
+        }
+
+        // Fetch available voices on page load
+        fetchAvailableVoices();
+
+        // Export button handler
+        document.getElementById('export-btn').addEventListener('click', exportCSV);
+
+        // Transport control handlers
+        document.getElementById('play-btn').addEventListener('click', togglePlayPause);
+        document.getElementById('stop-btn').addEventListener('click', stopPlayback);
+        document.getElementById('prev-btn').addEventListener('click', goToPreviousSegment);
+        document.getElementById('next-btn').addEventListener('click', goToNextSegment);
+
+        // Initialize drag and drop zones
+        setupDragAndDrop('csv-drop-zone', 'csv-file-hidden', handleCSVUpload);
+        setupDragAndDrop('video-drop-zone', 'video-file-hidden', handleVideoUpload);
+
+        function showLoading(message = 'Processing...') {
+            const loading = document.getElementById('loading');
+            loading.innerHTML = `
+                <div class="spinner"></div>
+                <p>${message}</p>
+            `;
+            loading.style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showMessage(message, type = 'error') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        async function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                console.log('No CSV file selected');
+                return;
+            }
+
+            // Additional client-side validation
+            const fileName = file.name.toLowerCase();
+            if (!fileName.endsWith('.csv')) {
+                showMessage('Please upload a CSV file. Only .csv files are allowed.');
+                return;
+            }
+
+            console.log('Uploading CSV file:', file.name);
+            showLoading('Uploading and processing CSV file...');
+
+            const formData = new FormData();
+            formData.append('csv_file', file);
+
+            try {
+                const response = await fetch('/upload-csv', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('CSV upload response status:', response.status);
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    showMessage('Server returned non-JSON response. Please try again.');
+                    return;
+                }
+                
+                const data = await response.json();
+                console.log('CSV upload response data:', data);
+
+                if (response.ok) {
+                    currentSegments = data.segments;
+                    currentSpeakers = data.speakers;
+                    
+                    // Initialize voice_id for each segment if not present
+                    currentSegments.forEach(segment => {
+                        if (!segment.hasOwnProperty('voice_id')) {
+                            segment.voice_id = '';
+                        }
+                    });
+                    
+                    // Set default zoom for 30-second view
+                    timelineZoom = calculateDefaultZoom();
+                    
+                    renderScriptSegments();
+                    renderTimeline();
+                    
+                    document.getElementById('export-btn').disabled = false;
+                    updateTransportControls();
+                    showMessage('CSV file loaded successfully!', 'success');
+                } else {
+                    showMessage(data.error);
+                }
+            } catch (error) {
+                console.error('CSV upload error:', error);
+                showMessage('Error uploading CSV file: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function handleVideoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                console.log('No file selected');
+                return;
+            }
+
+            // Check file size (1GB = 1024 * 1024 * 1024 bytes)
+            const maxSize = 1024 * 1024 * 1024; // 1GB
+            if (file.size > maxSize) {
+                showMessage('File size exceeds the 1GB limit. Please choose a smaller video file.');
+                return;
+            }
+
+            console.log('Uploading video file:', file.name, 'Size:', (file.size / (1024 * 1024)).toFixed(2) + 'MB');
+            showLoading('Uploading video file...');
+
+            const formData = new FormData();
+            formData.append('video_file', file);
+
+            try {
+                // Show upload progress
+                showLoading('Uploading video file...');
+                
+                const response = await fetch('/upload-video', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Video upload response status:', response.status);
+                
+                // For large files, show conversion progress
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                if (fileSizeMB > 100) {
+                    showLoading('Converting video for web preview... (this may take a few minutes)');
+                }
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    showMessage('Server returned non-JSON response. Please try again.');
+                    return;
+                }
+                
+                const data = await response.json();
+                console.log('Video upload response data:', data);
+
+                if (response.ok) {
+                    currentVideoFile = data.filename;
+                    renderVideoPreview();
+                    showMessage('Video file uploaded and converted successfully!', 'success');
+                } else {
+                    showMessage(data.error);
+                }
+            } catch (error) {
+                console.error('Video upload error:', error);
+                showMessage('Error uploading video file: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function setupDragAndDrop(dropZoneId, fileInputId, uploadHandler) {
+            const dropZone = document.getElementById(dropZoneId);
+            const fileInput = document.getElementById(fileInputId);
+
+            // Click to browse
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            // Validate file selection for CSV
+            if (dropZoneId === 'csv-drop-zone') {
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const fileName = file.name.toLowerCase();
+                        if (!fileName.endsWith('.csv')) {
+                            showMessage('Please upload a CSV file. Only .csv files are allowed.');
+                            e.target.value = ''; // Clear the file input
+                            return;
+                        }
+                    }
+                });
+            }
+
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            // Highlight drop zone when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            // Handle dropped files
+            dropZone.addEventListener('drop', handleDrop, false);
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function highlight(e) {
+                dropZone.classList.add('drag-over');
+            }
+
+            function unhighlight(e) {
+                dropZone.classList.remove('drag-over');
+            }
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+
+                if (files.length > 0) {
+                    const file = files[0];
+                    
+                    // Check if this is a CSV file
+                    if (dropZoneId === 'csv-drop-zone') {
+                        const fileName = file.name.toLowerCase();
+                        if (!fileName.endsWith('.csv')) {
+                            showMessage('Please upload a CSV file. Only .csv files are allowed.');
+                            return;
+                        }
+                    }
+                    
+                    fileInput.files = files;
+                    uploadHandler({ target: fileInput });
+                }
+            }
+        }
+
+        function renderScriptSegments() {
+            const container = document.getElementById('script-content');
+            container.innerHTML = '';
+
+            if (currentSegments.length === 0) {
+                container.innerHTML = `
+                    <div class="drag-drop-zone" id="csv-drop-zone">
+                        <div class="drag-drop-content">
+                            <i>📄</i>
+                            <p>Drag and drop CSV file here</p>
+                            <p class="drag-drop-subtitle">or click to browse</p>
+                            <input type="file" id="csv-file-hidden" accept=".csv" style="display: none;">
+                        </div>
+                    </div>
+                `;
+                setupDragAndDrop('csv-drop-zone', 'csv-file-hidden', handleCSVUpload);
+                return;
+            }
+
+            currentSegments.forEach((segment, index) => {
+                const segmentDiv = document.createElement('div');
+                segmentDiv.className = 'segment-item';
+                const speakerColor = getSpeakerColor(segment.speaker);
+                
+                // Create speaker dropdown options
+                const speakerOptions = currentSpeakers.map(speaker => 
+                    `<option value="${speaker}" ${speaker === segment.speaker ? 'selected' : ''}>${speaker}</option>`
+                ).join('');
+                
+                // Create custom voice dropdown with search
+                const selectedVoice = availableVoices.find(voice => voice.voice_id === segment.voice_id);
+                const selectedVoiceName = selectedVoice ? (selectedVoice.name.length > 20 ? selectedVoice.name.substring(0, 17) + '...' : selectedVoice.name) : 'No Voice Selected';
+                
+                segmentDiv.innerHTML = `
+                    <div class="segment-header">
+                        <div class="segment-info">
+                            <div class="voice-dropdown-container">
+                                <select class="segment-speaker-dropdown" data-segment-index="${index}" style="background: ${speakerColor}20; border-color: ${speakerColor}; color: ${speakerColor};">
+                                    ${speakerOptions}
+                                    <option value="__add_new__">+ Add New Speaker</option>
+                                </select>
+                                <div class="custom-voice-dropdown" data-segment-index="${index}" ${!apiKeyConfigured ? 'style="opacity: 0.5; pointer-events: none;"' : ''}>
+                                    <button class="custom-voice-dropdown-button" type="button" title="${!apiKeyConfigured ? 'ElevenLabs API key not configured' : 'Select voice for this segment'}">
+                                        ${selectedVoiceName}
+                                    </button>
+                                    <div class="custom-voice-dropdown-list">
+                                        <input type="text" class="custom-voice-search" placeholder="Search voices..." autocomplete="off">
+                                        <div class="custom-voice-options">
+                                            <button class="custom-voice-option" data-voice-id="" data-voice-name="No Voice Selected">No Voice Selected</button>
+                                            ${availableVoices.map(voice => {
+                                                const displayName = voice.name.length > 20 ? voice.name.substring(0, 17) + '...' : voice.name;
+                                                return `<button class="custom-voice-option" data-voice-id="${voice.voice_id}" data-voice-name="${voice.name}" title="${voice.name}">${displayName}</button>`;
+                                            }).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="segment-time">${segment.start_time_formatted} - ${segment.end_time_formatted}</span>
+                        </div>
+                        <div class="segment-actions">
+                            <button class="edit-btn" data-segment-index="${index}" title="Edit script text">✏️</button>
+                            <button class="delete-btn" data-segment-index="${index}" title="Delete segment">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="segment-text" data-segment-index="${index}">${segment.text}</div>
+                `;
+                container.appendChild(segmentDiv);
+            });
+
+            // Add event listeners for speaker dropdowns
+            const speakerDropdowns = container.querySelectorAll('.segment-speaker-dropdown');
+            speakerDropdowns.forEach(dropdown => {
+                dropdown.addEventListener('change', handleSpeakerChange);
+            });
+
+            // Add event listeners for custom voice dropdowns
+            const customVoiceDropdowns = container.querySelectorAll('.custom-voice-dropdown');
+            customVoiceDropdowns.forEach(dropdown => {
+                setupCustomVoiceDropdown(dropdown);
+            });
+
+            // Add event listeners for edit buttons
+            const editButtons = container.querySelectorAll('.edit-btn');
+            editButtons.forEach(button => {
+                button.addEventListener('click', handleEditClick);
+            });
+
+            // Add event listeners for delete buttons
+            const deleteButtons = container.querySelectorAll('.delete-btn');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', handleDeleteClick);
+            });
+        }
+
+        function handleSpeakerChange(event) {
+            const dropdown = event.target;
+            const segmentIndex = parseInt(dropdown.dataset.segmentIndex);
+            const newSpeaker = dropdown.value;
+
+            if (newSpeaker === '__add_new__') {
+                // Handle adding new speaker
+                const newSpeakerName = prompt('Enter new speaker name:');
+                if (newSpeakerName && newSpeakerName.trim()) {
+                    const trimmedName = newSpeakerName.trim();
+                    
+                    // Add new speaker to the list if it doesn't exist
+                    if (!currentSpeakers.includes(trimmedName)) {
+                        currentSpeakers.push(trimmedName);
+                    }
+                    
+                    // Update the segment
+                    currentSegments[segmentIndex].speaker = trimmedName;
+                    
+                    // Re-render both panels to reflect changes
+                    renderScriptSegments();
+                    renderTimeline();
+                    
+                    // Update dropdown to show the new speaker
+                    dropdown.value = trimmedName;
+                    dropdown.style.background = getSpeakerColor(trimmedName);
+                } else {
+                    // Reset to original speaker if user cancels
+                    dropdown.value = currentSegments[segmentIndex].speaker;
+                }
+            } else {
+                // Handle changing to existing speaker
+                currentSegments[segmentIndex].speaker = newSpeaker;
+                
+                // Update dropdown color
+                dropdown.style.background = getSpeakerColor(newSpeaker);
+                
+                // Re-render timeline to reflect changes
+                renderTimeline();
+            }
+        }
+
+        function setupCustomVoiceDropdown(dropdown) {
+            const button = dropdown.querySelector('.custom-voice-dropdown-button');
+            const list = dropdown.querySelector('.custom-voice-dropdown-list');
+            const searchInput = dropdown.querySelector('.custom-voice-search');
+            const optionsContainer = dropdown.querySelector('.custom-voice-options');
+            const segmentIndex = parseInt(dropdown.dataset.segmentIndex);
+            
+            // Toggle dropdown
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = dropdown.classList.contains('open');
+                
+                // Close all other dropdowns
+                document.querySelectorAll('.custom-voice-dropdown.open').forEach(openDropdown => {
+                    if (openDropdown !== dropdown) {
+                        openDropdown.classList.remove('open');
+                    }
+                });
+                
+                if (isOpen) {
+                    dropdown.classList.remove('open');
+                } else {
+                    dropdown.classList.add('open');
+                    searchInput.focus();
+                }
+            });
+            
+            // Search functionality
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const options = optionsContainer.querySelectorAll('.custom-voice-option');
+                let hasResults = false;
+                
+                options.forEach(option => {
+                    const voiceName = option.dataset.voiceName.toLowerCase();
+                    if (voiceName.includes(searchTerm)) {
+                        option.style.display = 'block';
+                        hasResults = true;
+                    } else {
+                        option.style.display = 'none';
+                    }
+                });
+                
+                // Show "no results" message if needed
+                let noResultsMsg = optionsContainer.querySelector('.no-results-msg');
+                if (!hasResults && searchTerm) {
+                    if (!noResultsMsg) {
+                        noResultsMsg = document.createElement('button');
+                        noResultsMsg.className = 'custom-voice-option no-results';
+                        noResultsMsg.textContent = 'No voices found';
+                        noResultsMsg.disabled = true;
+                        optionsContainer.appendChild(noResultsMsg);
+                    }
+                    noResultsMsg.style.display = 'block';
+                } else if (noResultsMsg) {
+                    noResultsMsg.style.display = 'none';
+                }
+            });
+            
+            // Handle option selection
+            optionsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('custom-voice-option')) {
+                    const voiceId = e.target.dataset.voiceId;
+                    const voiceName = e.target.dataset.voiceName;
+                    
+                    // Update the segment
+                    currentSegments[segmentIndex].voice_id = voiceId;
+                    
+                    // Update button text
+                    const displayName = voiceName.length > 20 ? voiceName.substring(0, 17) + '...' : voiceName;
+                    button.textContent = displayName;
+                    
+                    // Close dropdown
+                    dropdown.classList.remove('open');
+                    searchInput.value = '';
+                    
+                    // Reset search results
+                    const options = optionsContainer.querySelectorAll('.custom-voice-option');
+                    options.forEach(option => {
+                        option.style.display = 'block';
+                    });
+                    
+                    // Remove no results message
+                    const noResultsMsg = optionsContainer.querySelector('.no-results-msg');
+                    if (noResultsMsg) {
+                        noResultsMsg.remove();
+                    }
+                    
+                    console.log(`Voice changed for segment ${segmentIndex}: ${voiceName}`);
+                }
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.classList.remove('open');
+                    searchInput.value = '';
+                    
+                    // Reset search results
+                    const options = optionsContainer.querySelectorAll('.custom-voice-option');
+                    options.forEach(option => {
+                        option.style.display = 'block';
+                    });
+                    
+                    // Remove no results message
+                    const noResultsMsg = optionsContainer.querySelector('.no-results-msg');
+                    if (noResultsMsg) {
+                        noResultsMsg.remove();
+                    }
+                }
+            });
+            
+            // Handle keyboard navigation
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    dropdown.classList.remove('open');
+                    searchInput.value = '';
+                }
+            });
+        }
+
+        function handleVoiceChange(event) {
+            const dropdown = event.target;
+            const segmentIndex = parseInt(dropdown.dataset.segmentIndex);
+            const selectedVoiceId = dropdown.value;
+            
+            // Update the segment's voice_id
+            currentSegments[segmentIndex].voice_id = selectedVoiceId;
+            
+            // Find the selected voice name for display
+            const selectedVoice = availableVoices.find(voice => voice.voice_id === selectedVoiceId);
+            if (selectedVoice) {
+                console.log(`Voice changed for segment ${segmentIndex}: ${selectedVoice.name}`);
+            }
+        }
+
+        function handleEditClick(event) {
+            const button = event.target;
+            const segmentIndex = parseInt(button.dataset.segmentIndex);
+            const segmentText = document.querySelector(`.segment-text[data-segment-index="${segmentIndex}"]`);
+            
+            if (segmentText.classList.contains('editing')) {
+                // Already editing, save changes
+                saveEdit(segmentIndex, segmentText);
+            } else {
+                // Start editing
+                startEdit(segmentIndex, segmentText);
+            }
+        }
+
+        function startEdit(segmentIndex, segmentText) {
+            const currentText = currentSegments[segmentIndex].text;
+            
+            // Create textarea for editing
+            const textarea = document.createElement('textarea');
+            textarea.value = currentText;
+            textarea.placeholder = 'Enter script text...';
+            
+            // Clear segment text and add textarea
+            segmentText.innerHTML = '';
+            segmentText.appendChild(textarea);
+            segmentText.classList.add('editing');
+            
+            // Focus textarea and select all text
+            textarea.focus();
+            textarea.select();
+            
+            // Add keyboard event listeners
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    // Enter to save (without shift)
+                    e.preventDefault();
+                    saveEdit(segmentIndex, segmentText);
+                } else if (e.key === 'Enter' && e.shiftKey) {
+                    // Shift+Enter to add new line (let it happen naturally)
+                    // No preventDefault, so it adds a new line
+                } else if (e.key === 'Escape') {
+                    // Escape to cancel
+                    e.preventDefault();
+                    cancelEdit(segmentIndex, segmentText);
+                }
+            });
+            
+            // Add blur event to save when clicking outside
+            textarea.addEventListener('blur', () => {
+                setTimeout(() => {
+                    if (segmentText.classList.contains('editing')) {
+                        saveEdit(segmentIndex, segmentText);
+                    }
+                }, 100);
+            });
+        }
+
+        function saveEdit(segmentIndex, segmentText) {
+            const textarea = segmentText.querySelector('textarea');
+            const newText = textarea.value.trim();
+            
+            if (newText) {
+                // Update the segment text
+                currentSegments[segmentIndex].text = newText;
+                
+                // Update the display
+                segmentText.innerHTML = newText;
+                segmentText.classList.remove('editing');
+                
+                // Update timeline to reflect changes
+                renderTimeline();
+                
+                // Show success message
+                showMessage('Script text updated successfully!', 'success');
+            } else {
+                // If text is empty, cancel the edit
+                cancelEdit(segmentIndex, segmentText);
+            }
+        }
+
+        function cancelEdit(segmentIndex, segmentText) {
+            // Restore original text
+            const originalText = currentSegments[segmentIndex].text;
+            segmentText.innerHTML = originalText;
+            segmentText.classList.remove('editing');
+        }
+
+        function handleDeleteClick(event) {
+            const button = event.target;
+            const segmentIndex = parseInt(button.dataset.segmentIndex);
+            const segment = currentSegments[segmentIndex];
+            
+            // Show confirmation dialog
+            const confirmed = confirm(`Are you sure you want to delete this segment?\n\nSpeaker: ${segment.speaker}\nTime: ${segment.start_time_formatted} - ${segment.end_time_formatted}\nText: ${segment.text.substring(0, 50)}${segment.text.length > 50 ? '...' : ''}`);
+            
+            if (confirmed) {
+                // Remove segment from array
+                currentSegments.splice(segmentIndex, 1);
+                
+                // Re-render both panels to reflect changes
+                renderScriptSegments();
+                renderTimeline();
+                
+                // Update transport controls
+                updateTransportControls();
+                
+                // Show success message
+                showMessage('Segment deleted successfully!', 'success');
+            }
+        }
+
+
+
+        function renderVideoPreview() {
+            const container = document.getElementById('video-content');
+            if (!currentVideoFile) {
+                container.innerHTML = `
+                    <div class="drag-drop-zone" id="video-drop-zone">
+                        <div class="drag-drop-content">
+                            <i>🎬</i>
+                            <p>Drag and drop video file here</p>
+                            <p class="drag-drop-subtitle">or click to browse</p>
+                            <input type="file" id="video-file-hidden" accept="video/*" style="display: none;">
+                        </div>
+                    </div>
+                `;
+                setupDragAndDrop('video-drop-zone', 'video-file-hidden', handleVideoUpload);
+                currentVideoElement = null;
+                updateTransportControls();
+                return;
+            }
+
+            container.innerHTML = `
+                <video style="max-width: 100%; max-height: 100%;">
+                    <source src="/uploads/${currentVideoFile}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            `;
+            
+            // Store reference to video element
+            currentVideoElement = container.querySelector('video');
+            updateTransportControls();
+        }
+
+        function renderTimeline() {
+            const container = document.getElementById('timeline-container');
+            container.innerHTML = '';
+
+            if (currentSegments.length === 0) {
+                container.innerHTML = '<div class="video-placeholder"><i>⏱️</i><p>No segments found</p></div>';
+                return;
+            }
+
+            // Calculate timeline scale
+            const maxDuration = Math.max(...currentSegments.map(s => s.end_time));
+            const timelineWidth = 1000 * timelineZoom; // Zoomed width for timeline
+            const pixelsPerSecond = timelineWidth / maxDuration;
+
+            // Create timeline header
+            const header = document.createElement('div');
+            header.className = 'timeline-header';
+            header.innerHTML = `
+                <div class="timeline-speaker-header">Speaker</div>
+                <div class="timeline-time-header">
+                    Timeline
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" id="zoom-out-btn" onclick="changeZoom(0.7)">−</button>
+                        <button class="zoom-btn" id="zoom-in-btn" onclick="changeZoom(1.3)">+</button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(header);
+
+            // Create timeline tracks with sticky speaker names
+            const tracksContainer = document.createElement('div');
+            tracksContainer.className = 'timeline-tracks';
+
+            // Create inner container for both columns
+            const tracksInnerContainer = document.createElement('div');
+            tracksInnerContainer.className = 'timeline-tracks-container';
+
+            // Create speakers column (sticky)
+            const speakersColumn = document.createElement('div');
+            speakersColumn.className = 'timeline-speakers-column';
+
+            // Create scrollable content area
+            const contentArea = document.createElement('div');
+            contentArea.className = 'timeline-content-scrollable';
+
+            // Add playhead to content area
+            const playhead = document.createElement('div');
+            playhead.className = 'playhead';
+            playhead.id = 'timeline-playhead';
+            
+            // Add playhead handle
+            const playheadHandle = document.createElement('div');
+            playheadHandle.className = 'playhead-handle';
+            playhead.appendChild(playheadHandle);
+            
+            contentArea.appendChild(playhead);
+
+            // Get speakers in order of first appearance
+            const speakersInOrder = getSpeakersInOrder();
+
+            speakersInOrder.forEach((speaker, index) => {
+                const speakerColor = getSpeakerColor(speaker);
+                
+                // Create speaker name in sticky column
+                const speakerDiv = document.createElement('div');
+                speakerDiv.className = 'timeline-track-speaker';
+                speakerDiv.style.background = speakerColor + "20";
+                speakerDiv.style.color = speakerColor;
+                speakerDiv.textContent = speaker;
+                speakersColumn.appendChild(speakerDiv);
+                
+                // Create track content in scrollable area
+                const trackContent = document.createElement('div');
+                trackContent.className = 'timeline-track-content';
+
+                // Add segments for this speaker
+                currentSegments
+                    .filter(segment => segment.speaker === speaker)
+                    .forEach(segment => {
+                        const segmentDiv = document.createElement('div');
+                        segmentDiv.className = 'timeline-segment';
+                        segmentDiv.style.left = `${segment.start_time * pixelsPerSecond}px`;
+                        segmentDiv.style.width = `${segment.duration * pixelsPerSecond}px`;
+                        segmentDiv.style.background = speakerColor + "20";
+                        segmentDiv.style.border = "2px solid " + speakerColor;
+                        segmentDiv.style.color = speakerColor;
+                        segmentDiv.title = `Click to scroll to script segment: ${segment.text} (${segment.start_time_formatted} - ${segment.end_time_formatted})`;
+                        segmentDiv.textContent = segment.text.length > 20 ? segment.text.substring(0, 20) + '...' : segment.text;
+                        segmentDiv.dataset.segmentIndex = currentSegments.indexOf(segment);
+                        
+                        // Add resize handles
+                        const leftHandle = document.createElement('div');
+                        leftHandle.className = 'resize-handle left-handle';
+                        leftHandle.dataset.segmentIndex = currentSegments.indexOf(segment);
+                        leftHandle.dataset.handle = 'left';
+                        
+                        const rightHandle = document.createElement('div');
+                        rightHandle.className = 'resize-handle right-handle';
+                        rightHandle.dataset.segmentIndex = currentSegments.indexOf(segment);
+                        rightHandle.dataset.handle = 'right';
+                        
+                        segmentDiv.appendChild(leftHandle);
+                        segmentDiv.appendChild(rightHandle);
+                        trackContent.appendChild(segmentDiv);
+                    });
+
+                contentArea.appendChild(trackContent);
+            });
+
+            tracksInnerContainer.appendChild(speakersColumn);
+            tracksInnerContainer.appendChild(contentArea);
+            tracksContainer.appendChild(tracksInnerContainer);
+            container.appendChild(tracksContainer);
+        }
+
+        async function exportCSV() {
+            if (currentSegments.length === 0) {
+                showMessage('No segments to export');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch('/export-csv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        segments: currentSegments,
+                        include_voices: true
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'script_timeline.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    showMessage('CSV exported successfully!', 'success');
+                } else {
+                    const data = await response.json();
+                    showMessage(data.error);
+                }
+            } catch (error) {
+                showMessage('Error exporting CSV: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Timeline segment click handling
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('timeline-segment')) {
+                const segmentIndex = parseInt(event.target.dataset.segmentIndex);
+                if (segmentIndex >= 0 && segmentIndex < currentSegments.length) {
+                    const segment = currentSegments[segmentIndex];
+                    
+                    // Add visual feedback for the clicked segment
+                    event.target.style.transform = 'scale(1.05)';
+                    event.target.style.filter = 'brightness(1.2)';
+                    
+                    setTimeout(() => {
+                        event.target.style.transform = '';
+                        event.target.style.filter = '';
+                    }, 200);
+                    
+                    // Always scroll to the corresponding script segment
+                    scrollToScriptSegment(segmentIndex);
+                    
+                    // If video is playing, also jump to segment time
+                    if (currentVideoElement && !currentVideoElement.paused) {
+                        currentVideoElement.currentTime = segment.start_time;
+                        currentVideoElement.play();
+                    } else if (currentVideoElement) {
+                        // If video is paused, just set the time without playing
+                        currentVideoElement.currentTime = segment.start_time;
+                        updatePlayhead(segment.start_time);
+                    }
+                }
+            } else if (event.target.classList.contains('timeline-track-content') && currentSegments.length > 0) {
+                // Click on timeline track to move playhead
+                const rect = event.target.getBoundingClientRect();
+                const clickX = event.clientX - rect.left;
+                const maxDuration = Math.max(...currentSegments.map(s => s.end_time));
+                const timelineWidth = 1000 * timelineZoom;
+                const pixelsPerSecond = timelineWidth / maxDuration;
+                const newTime = clickX / pixelsPerSecond;
+                
+                // Update playhead position
+                updatePlayhead(newTime);
+                
+                // Update video time if video is loaded
+                if (currentVideoElement) {
+                    currentVideoElement.currentTime = newTime;
+                }
+            }
+        });
+
+        // Format timecode function
+        function formatTimecode(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toFixed(3).padStart(6, '0')}`;
+        }
+
+        // Scroll to script segment function
+        function scrollToScriptSegment(segmentIndex) {
+            const scriptContent = document.getElementById('script-content');
+            const segmentElements = scriptContent.querySelectorAll('.segment-item');
+            
+            if (segmentIndex >= 0 && segmentIndex < segmentElements.length) {
+                const targetSegment = segmentElements[segmentIndex];
+                
+                // Use setTimeout to ensure DOM is ready and scroll works properly
+                setTimeout(() => {
+                    // Calculate scroll position to center the segment
+                    const containerHeight = scriptContent.clientHeight;
+                    const segmentHeight = targetSegment.offsetHeight;
+                    const segmentTop = targetSegment.offsetTop;
+                    
+                    // Target position: segment positioned in the middle of the container
+                    const targetScrollTop = segmentTop - (containerHeight / 2) + (segmentHeight / 2);
+                    
+                    scriptContent.scrollTo({
+                        top: targetScrollTop,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Add a brief highlight effect to the segment
+                    targetSegment.style.transition = 'all 0.3s ease';
+                    targetSegment.style.transform = 'scale(1.02)';
+                    targetSegment.style.boxShadow = '0 0 10px rgba(0, 212, 255, 0.5)';
+                    
+                    setTimeout(() => {
+                        targetSegment.style.transform = '';
+                        targetSegment.style.boxShadow = '';
+                    }, 1000);
+                }, 50); // Small delay to ensure DOM is ready
+            }
+        }
+
+        // Resize functionality
+        let isResizing = false;
+        let currentResizeHandle = null;
+        let currentResizeSegment = null;
+        let startX = 0;
+        let startTime = 0;
+        let startDuration = 0;
+
+        // Playhead dragging functionality
+        let isDraggingPlayhead = false;
+        let playheadStartX = 0;
+        let playheadStartTime = 0;
+
+        document.addEventListener('mousedown', function(event) {
+            if (event.target.classList.contains('resize-handle')) {
+                isResizing = true;
+                currentResizeHandle = event.target.dataset.handle;
+                currentResizeSegment = parseInt(event.target.dataset.segmentIndex);
+                startX = event.clientX;
+                
+                const segment = currentSegments[currentResizeSegment];
+                startTime = segment.start_time;
+                startDuration = segment.duration;
+                
+                event.target.parentElement.classList.add('resizing');
+                event.preventDefault();
+            } else if (event.target.classList.contains('playhead-handle') || event.target.classList.contains('playhead')) {
+                isDraggingPlayhead = true;
+                playheadStartX = event.clientX;
+                
+                // Get current playhead time
+                const playhead = document.getElementById('timeline-playhead');
+                if (playhead && currentSegments.length > 0) {
+                    const maxDuration = Math.max(...currentSegments.map(s => s.end_time));
+                    const timelineWidth = 1000 * timelineZoom;
+                    const pixelsPerSecond = timelineWidth / maxDuration;
+                    const playheadLeft = parseFloat(playhead.style.left) || 0;
+                    playheadStartTime = playheadLeft / pixelsPerSecond;
+                }
+                
+                event.preventDefault();
+            }
+        });
+
+        document.addEventListener('mousemove', function(event) {
+            if (isResizing && currentResizeSegment !== null) {
+                const deltaX = event.clientX - startX;
+                
+                // Calculate pixels per second the same way as in renderTimeline
+                const maxDuration = Math.max(...currentSegments.map(s => s.end_time));
+                const timelineWidth = 1000 * timelineZoom;
+                const pixelsPerSecond = timelineWidth / maxDuration;
+                const deltaTime = deltaX / pixelsPerSecond;
+                
+                const segment = currentSegments[currentResizeSegment];
+                
+                if (currentResizeHandle === 'left') {
+                    // Resize from left (change start time)
+                    const newStartTime = Math.max(0, startTime + deltaTime);
+                    const newDuration = startDuration - (newStartTime - startTime);
+                    
+                    if (newDuration > 0.1) { // Minimum 0.1 second duration
+                        segment.start_time = newStartTime;
+                        segment.duration = newDuration;
+                        segment.end_time = newStartTime + newDuration;
+                        segment.start_time_formatted = formatTimecode(newStartTime);
+                        segment.end_time_formatted = formatTimecode(segment.end_time);
+                    }
+                } else if (currentResizeHandle === 'right') {
+                    // Resize from right (change end time)
+                    const newDuration = Math.max(0.1, startDuration + deltaTime);
+                    segment.duration = newDuration;
+                    segment.end_time = segment.start_time + newDuration;
+                    segment.end_time_formatted = formatTimecode(segment.end_time);
+                }
+                
+                // Update timeline display
+                console.log('Resizing segment:', currentResizeSegment, 'New start:', segment.start_time, 'New end:', segment.end_time);
+                renderTimeline();
+                renderScriptSegments();
+            } else if (isDraggingPlayhead && currentSegments.length > 0) {
+                const deltaX = event.clientX - playheadStartX;
+                const maxDuration = Math.max(...currentSegments.map(s => s.end_time));
+                const timelineWidth = 1000 * timelineZoom;
+                const pixelsPerSecond = timelineWidth / maxDuration;
+                const deltaTime = deltaX / pixelsPerSecond;
+                const newTime = Math.max(0, Math.min(maxDuration, playheadStartTime + deltaTime));
+                
+                // Update playhead position
+                updatePlayhead(newTime);
+                
+                // Update video time if video is loaded
+                if (currentVideoElement) {
+                    currentVideoElement.currentTime = newTime;
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', function(event) {
+            if (isResizing) {
+                isResizing = false;
+                if (currentResizeSegment !== null) {
+                    const segmentElement = document.querySelector(`[data-segment-index="${currentResizeSegment}"]`);
+                    if (segmentElement) {
+                        segmentElement.classList.remove('resizing');
+                    }
+                }
+                currentResizeHandle = null;
+                currentResizeSegment = null;
+            } else if (isDraggingPlayhead) {
+                isDraggingPlayhead = false;
+            }
+        });
+    </script>
+</body>
+</html> 
