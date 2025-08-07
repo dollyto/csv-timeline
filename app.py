@@ -140,7 +140,7 @@ def convert_video_for_preview(input_path, output_path):
             '-show_format', '-show_streams', input_path
         ]
         
-        result = subprocess.run(probe_cmd, capture_output=True, text=True)
+        result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
         if result.returncode != 0:
             return False, "Failed to probe video file"
         
@@ -163,14 +163,15 @@ def convert_video_for_preview(input_path, output_path):
         
         app.logger.info(f"Original video dimensions: {width}x{height}")
         
-        # Calculate new dimensions (maximum 720p, maintain aspect ratio)
-        if height > 720:
-            # Scale down to maximum 720p
-            scale_factor = 720 / height
+        # For Render's limited resources, use more conservative settings
+        # Scale down more aggressively and use faster preset
+        if height > 480:  # Reduced from 720p to 480p
+            # Scale down to maximum 480p
+            scale_factor = 480 / height
             new_width = int(width * scale_factor)
-            new_height = 720
+            new_height = 480
         else:
-            # Keep original size if already 720p or lower
+            # Keep original size if already 480p or lower
             new_width = width
             new_height = height
         
@@ -180,24 +181,25 @@ def convert_video_for_preview(input_path, output_path):
         new_width = new_width + (new_width % 2)
         new_height = new_height + (new_height % 2)
         
-        # Calculate bitrate to keep file under 200MB
-        # Estimate: 200MB = ~1600Mbps for reasonable quality
-        target_bitrate = "1600k"
+        # Use lower bitrate for smaller file size and faster processing
+        target_bitrate = "800k"  # Reduced from 1600k
         
-        # Convert video
+        # Convert video with optimized settings for Render
         convert_cmd = [
             'ffmpeg', '-i', input_path,
             '-c:v', 'libx264',  # H.264 codec
             '-c:a', 'aac',       # AAC audio codec
             '-b:v', target_bitrate,
-            '-vf', f'scale={new_width}:{new_height}:flags=lanczos',  # Use lanczos for better quality
-            '-preset', 'medium',  # Balance between speed and quality
+            '-vf', f'scale={new_width}:{new_height}:flags=fast_bilinear',  # Use faster scaling
+            '-preset', 'ultrafast',  # Use fastest preset for Render
+            '-tune', 'fastdecode',   # Optimize for fast decoding
             '-movflags', '+faststart',  # Optimize for web streaming
             '-y',  # Overwrite output file
             output_path
         ]
         
-        result = subprocess.run(convert_cmd, capture_output=True, text=True)
+        # Add timeout to prevent hanging
+        result = subprocess.run(convert_cmd, capture_output=True, text=True, timeout=300)  # 5 minute timeout
         
         if result.returncode != 0:
             app.logger.error(f"FFmpeg conversion failed with return code {result.returncode}")
@@ -210,6 +212,8 @@ def convert_video_for_preview(input_path, output_path):
         app.logger.info(f"Output dimensions: {new_width}x{new_height}")
         return True, "Video converted successfully"
         
+    except subprocess.TimeoutExpired:
+        return False, "Video conversion timed out (took too long)"
     except Exception as e:
         return False, f"Video conversion error: {str(e)}"
 
@@ -347,7 +351,13 @@ def upload_video():
         file.seek(0, 2)  # Seek to end
         file_size = file.tell()
         file.seek(0)  # Reset to beginning
-        app.logger.info(f"File size: {file_size} bytes ({file_size / (1024*1024):.2f} MB)")
+        file_size_mb = file_size / (1024*1024)
+        app.logger.info(f"File size: {file_size} bytes ({file_size_mb:.2f} MB)")
+        
+        # Limit file size to 100MB for Render's free tier
+        if file_size_mb > 100:
+            app.logger.error(f"File too large: {file_size_mb:.2f} MB (max 100MB)")
+            return jsonify({'error': f'File too large: {file_size_mb:.2f} MB. Maximum size is 100MB for video processing.'}), 400
         
         if not allowed_video_file(file.filename):
             app.logger.error(f"Invalid file format: {file.filename}")
@@ -386,10 +396,25 @@ def upload_video():
         
         if not success:
             app.logger.error(f"Video conversion failed: {message}")
-            # Clean up original file
-            if os.path.exists(original_filepath):
-                os.remove(original_filepath)
-            return jsonify({'error': f'Video conversion failed: {message}'}), 400
+            
+            # For large files, try to use the original file without conversion
+            if file_size_mb > 50:
+                app.logger.info("Large file detected, attempting to use original file without conversion")
+                try:
+                    # Copy original file to preview location
+                    import shutil
+                    shutil.copy2(original_filepath, preview_filepath)
+                    app.logger.info("Using original file without conversion")
+                    success = True
+                    message = "Using original file (conversion skipped for large file)"
+                except Exception as e:
+                    app.logger.error(f"Failed to copy original file: {str(e)}")
+            
+            if not success:
+                # Clean up original file
+                if os.path.exists(original_filepath):
+                    os.remove(original_filepath)
+                return jsonify({'error': f'Video conversion failed: {message}'}), 400
         
         # Clean up original file to save space
         if os.path.exists(original_filepath):
