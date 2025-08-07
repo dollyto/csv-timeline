@@ -62,23 +62,32 @@ def get_elevenlabs_voices():
         return []
 
 def parse_timecode(time_str):
-    """Parse timecode in format hh:mm:ss:ff or hh:mm:ss.ff"""
+    """Parse timecode in format hh:mm:ss:ff, hh:mm:ss.ff, or decimal seconds"""
+    # Convert to string and strip whitespace
+    time_str = str(time_str).strip()
+    
     # Handle different timecode formats
     if ':' in time_str:
         parts = time_str.split(':')
         if len(parts) == 4:  # hh:mm:ss:ff format
-            hours, minutes, seconds, frames = map(int, parts)
-            total_seconds = hours * 3600 + minutes * 60 + seconds + frames / 30.0
+            try:
+                hours, minutes, seconds, frames = map(int, parts)
+                total_seconds = hours * 3600 + minutes * 60 + seconds + frames / 30.0
+            except (ValueError, TypeError):
+                return 0
         elif len(parts) == 3:  # hh:mm:ss format
-            hours, minutes, seconds = map(int, parts)
-            total_seconds = hours * 3600 + minutes * 60 + seconds
+            try:
+                hours, minutes, seconds = map(int, parts)
+                total_seconds = hours * 3600 + minutes * 60 + seconds
+            except (ValueError, TypeError):
+                return 0
         else:
             return 0
     else:
-        # Try to parse as seconds
+        # Try to parse as decimal seconds
         try:
             total_seconds = float(time_str)
-        except ValueError:
+        except (ValueError, TypeError):
             return 0
     
     return total_seconds
@@ -252,10 +261,15 @@ def upload_csv():
         speakers = set()
         
         for index, row in df.iterrows():
-            start_time = parse_timecode(str(row[start_time_col]))
-            end_time = parse_timecode(str(row[end_time_col]))
-            speaker = str(row[speaker_col])
-            text = str(row[source_col])
+            try:
+                start_time = parse_timecode(str(row[start_time_col]))
+                end_time = parse_timecode(str(row[end_time_col]))
+                speaker = str(row[speaker_col])
+                text = str(row[source_col])
+            except Exception as e:
+                app.logger.error(f"Error processing row {index}: {e}")
+                app.logger.error(f"Row data: {row.to_dict()}")
+                continue
             
             if start_time >= 0 and end_time > start_time:
                 segments.append({
