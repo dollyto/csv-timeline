@@ -32,23 +32,86 @@ A Flask web application for processing CSV files with timeline data and generati
    ```
 6. Open http://localhost:8080 in your browser
 
-## Deployment to Render
+## Deployment Options
 
-### Prerequisites
+### Option 1: Railway (Recommended for Video Processing)
 
+Railway offers better performance for video processing with a generous free tier.
+
+#### Prerequisites
+1. A Railway account at [railway.app](https://railway.app)
+2. Your code pushed to a Git repository
+
+#### Deployment Steps
+1. **Connect to Railway:**
+   - Go to [Railway Dashboard](https://railway.app/dashboard)
+   - Click "New Project" → "Deploy from GitHub repo"
+   - Select your repository
+
+2. **Configure the service:**
+   - Railway will automatically detect it's a Python app
+   - The `railway.json` file will configure the deployment
+
+3. **Set environment variables:**
+   - Go to the "Variables" tab
+   - Add `ELEVENLABS_API_KEY` with your API key (optional)
+
+4. **Deploy:**
+   - Railway will automatically build and deploy
+
+#### Advantages
+- **Better Performance:** 2GB RAM, 2 CPU cores on paid plan
+- **FFmpeg Support:** Built-in support for video processing
+- **Cost-Effective:** $5/month credit on free tier
+
+### Option 2: Fly.io (Best Free Tier)
+
+Fly.io offers the most generous free tier for video processing.
+
+#### Prerequisites
+1. Install Fly CLI: `curl -L https://fly.io/install.sh | sh`
+2. Sign up at [fly.io](https://fly.io)
+3. Run `fly auth login`
+
+#### Deployment Steps
+1. **Deploy with Fly CLI:**
+   ```bash
+   fly launch
+   ```
+   - Follow the prompts
+   - Use the app name: `csv-timeline`
+
+2. **Set environment variables:**
+   ```bash
+   fly secrets set ELEVENLABS_API_KEY=your_api_key
+   ```
+
+3. **Deploy:**
+   ```bash
+   fly deploy
+   ```
+
+#### Advantages
+- **Generous Free Tier:** 3 shared-cpu-1x 256mb VMs, 3GB storage
+- **Good Performance:** 2GB RAM available on paid plan
+- **Docker-based:** More control over the environment
+
+### Option 3: Render (Current)
+
+Render's free tier is limited for video processing but works for basic usage.
+
+#### Prerequisites
 1. A Render account (free tier available)
-2. Your code pushed to a Git repository (GitHub, GitLab, etc.)
-3. ElevenLabs API key (optional, for voice features)
+2. Your code pushed to a Git repository
 
-### Deployment Steps
-
+#### Deployment Steps
 1. **Connect your repository to Render:**
    - Go to [Render Dashboard](https://dashboard.render.com/)
    - Click "New +" and select "Web Service"
    - Connect your Git repository
 
 2. **Configure the service:**
-   - **Name:** csv-timeline (or your preferred name)
+   - **Name:** csv-timeline
    - **Environment:** Python
    - **Build Command:** `pip install -r requirements.txt`
    - **Start Command:** `gunicorn app:app`
@@ -57,15 +120,56 @@ A Flask web application for processing CSV files with timeline data and generati
    - Go to the "Environment" tab
    - Add `ELEVENLABS_API_KEY` with your API key (optional)
 
-4. **Deploy:**
-   - Click "Create Web Service"
-   - Render will automatically build and deploy your application
+#### Limitations
+- **Limited Resources:** 512MB RAM, 0.5 CPU cores on free tier
+- **Video Processing:** May timeout on large files
+- **Memory Constraints:** Worker timeouts common with video processing
 
-### Important Notes
+### Option 4: DigitalOcean App Platform
 
-- **File Storage:** Render uses an ephemeral filesystem, so uploaded files will be lost when the service restarts. For production use, consider integrating with cloud storage (AWS S3, Google Cloud Storage, etc.).
-- **FFmpeg:** The application uses FFmpeg for video processing. If you need video conversion features, you'll need to ensure FFmpeg is available in your deployment environment.
-- **Free Tier Limitations:** The free tier has limitations on build time and runtime. For production use, consider upgrading to a paid plan.
+Good performance with a credit-based free tier.
+
+#### Prerequisites
+1. DigitalOcean account with $200 credit
+2. Your code pushed to a Git repository
+
+#### Deployment Steps
+1. **Create App:**
+   - Go to [DigitalOcean App Platform](https://cloud.digitalocean.com/apps)
+   - Click "Create App" → "Create App from Source Code"
+   - Connect your GitHub repository
+
+2. **Configure:**
+   - **Source Directory:** `/`
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Run Command:** `gunicorn app:app`
+
+3. **Set environment variables:**
+   - Add `ELEVENLABS_API_KEY` in the environment section
+
+#### Advantages
+- **Good Performance:** 2GB RAM, 1 CPU core
+- **Reliable:** Excellent uptime and performance
+- **Credit Available:** $200 free credit for 60 days
+
+## Platform Comparison
+
+| Platform | Free Tier | Paid Starting | Video Processing | Recommended |
+|----------|-----------|---------------|------------------|-------------|
+| **Railway** | $5/month credit | $20/month | ✅ Excellent | ⭐⭐⭐⭐⭐ |
+| **Fly.io** | 3 VMs, 3GB storage | $1.94/month | ✅ Good | ⭐⭐⭐⭐ |
+| **DigitalOcean** | $200 credit | $12/month | ✅ Good | ⭐⭐⭐⭐ |
+| **Render** | 512MB RAM | $7/month | ⚠️ Limited | ⭐⭐ |
+
+## Minimum Requirements for Video Processing
+
+For reliable video processing, you need:
+- **RAM:** 2GB+ (video processing is memory-intensive)
+- **CPU:** 2+ cores (for FFmpeg processing)
+- **Storage:** 10GB+ (for video files)
+- **Network:** Good bandwidth for uploads
+
+**Recommendation:** Start with Railway or Fly.io for the best free tier experience with video processing capabilities.
 
 ## Environment Variables
 
