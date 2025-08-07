@@ -330,35 +330,62 @@ def upload_csv():
 @app.route('/upload-video', methods=['POST'])
 def upload_video():
     try:
+        app.logger.info("Starting video upload process")
+        
         if 'video_file' not in request.files:
+            app.logger.error("No video_file in request.files")
             return jsonify({'error': 'No video file provided'}), 400
         
         file = request.files['video_file']
         if file.filename == '':
+            app.logger.error("Empty filename")
             return jsonify({'error': 'No file selected'}), 400
         
+        app.logger.info(f"Processing video file: {file.filename}")
+        
+        # Check file size
+        file.seek(0, 2)  # Seek to end
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+        app.logger.info(f"File size: {file_size} bytes ({file_size / (1024*1024):.2f} MB)")
+        
         if not allowed_video_file(file.filename):
+            app.logger.error(f"Invalid file format: {file.filename}")
             return jsonify({'error': 'Invalid video file format'}), 400
         
         # Ensure upload directory exists
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        try:
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            app.logger.info(f"Upload directory ensured: {app.config['UPLOAD_FOLDER']}")
+        except Exception as e:
+            app.logger.error(f"Failed to create upload directory: {str(e)}")
+            return jsonify({'error': f'Failed to create upload directory: {str(e)}'}), 500
         
         # Save original file with temporary name
         original_filename = secure_filename(file.filename)
         original_filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"original_{original_filename}")
-        file.save(original_filepath)
+        
+        try:
+            file.save(original_filepath)
+            app.logger.info(f"Original file saved: {original_filepath}")
+        except Exception as e:
+            app.logger.error(f"Failed to save original file: {str(e)}")
+            return jsonify({'error': f'Failed to save video file: {str(e)}'}), 500
         
         # Verify original file was saved
         if not os.path.exists(original_filepath):
+            app.logger.error(f"Original file not found after save: {original_filepath}")
             return jsonify({'error': 'Failed to save original video file'}), 500
         
         # Convert video for preview
         preview_filename = f"preview_{original_filename.rsplit('.', 1)[0]}.mp4"
         preview_filepath = os.path.join(app.config['UPLOAD_FOLDER'], preview_filename)
         
+        app.logger.info(f"Starting video conversion: {original_filepath} -> {preview_filepath}")
         success, message = convert_video_for_preview(original_filepath, preview_filepath)
         
         if not success:
+            app.logger.error(f"Video conversion failed: {message}")
             # Clean up original file
             if os.path.exists(original_filepath):
                 os.remove(original_filepath)
@@ -367,7 +394,9 @@ def upload_video():
         # Clean up original file to save space
         if os.path.exists(original_filepath):
             os.remove(original_filepath)
+            app.logger.info("Original file cleaned up")
         
+        app.logger.info(f"Video upload successful: {preview_filename}")
         return jsonify({
             'filename': preview_filename,
             'filepath': preview_filepath
@@ -375,6 +404,9 @@ def upload_video():
         
     except Exception as e:
         app.logger.error(f'Video upload error: {str(e)}')
+        app.logger.error(f'Exception type: {type(e).__name__}')
+        import traceback
+        app.logger.error(f'Traceback: {traceback.format_exc()}')
         return jsonify({'error': f'Error uploading video: {str(e)}'}), 400
 
 @app.route('/export-csv', methods=['POST'])
@@ -423,6 +455,19 @@ def export_csv():
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Global error handler to ensure JSON responses"""
+    app.logger.error(f"Unhandled exception: {str(e)}")
+    import traceback
+    app.logger.error(f"Traceback: {traceback.format_exc()}")
+    return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+@app.errorhandler(413)
+def handle_file_too_large(e):
+    """Handle file too large errors"""
+    return jsonify({'error': 'File too large. Maximum size is 1GB.'}), 413
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
