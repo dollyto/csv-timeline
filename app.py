@@ -161,6 +161,8 @@ def convert_video_for_preview(input_path, output_path):
         width = int(video_stream.get('width', 1920))
         height = int(video_stream.get('height', 1080))
         
+        app.logger.info(f"Original video dimensions: {width}x{height}")
+        
         # Calculate new dimensions (maximum 720p, maintain aspect ratio)
         if height > 720:
             # Scale down to maximum 720p
@@ -172,6 +174,12 @@ def convert_video_for_preview(input_path, output_path):
             new_width = width
             new_height = height
         
+        app.logger.info(f"Calculated dimensions: {new_width}x{new_height}")
+        
+        # Ensure dimensions are even numbers (required for H.264)
+        new_width = new_width + (new_width % 2)
+        new_height = new_height + (new_height % 2)
+        
         # Calculate bitrate to keep file under 200MB
         # Estimate: 200MB = ~1600Mbps for reasonable quality
         target_bitrate = "1600k"
@@ -182,7 +190,7 @@ def convert_video_for_preview(input_path, output_path):
             '-c:v', 'libx264',  # H.264 codec
             '-c:a', 'aac',       # AAC audio codec
             '-b:v', target_bitrate,
-            '-vf', f'scale={new_width}:{new_height}',
+            '-vf', f'scale={new_width}:{new_height}:flags=lanczos',  # Use lanczos for better quality
             '-preset', 'medium',  # Balance between speed and quality
             '-movflags', '+faststart',  # Optimize for web streaming
             '-y',  # Overwrite output file
@@ -192,8 +200,14 @@ def convert_video_for_preview(input_path, output_path):
         result = subprocess.run(convert_cmd, capture_output=True, text=True)
         
         if result.returncode != 0:
+            app.logger.error(f"FFmpeg conversion failed with return code {result.returncode}")
+            app.logger.error(f"FFmpeg stderr: {result.stderr}")
+            app.logger.error(f"FFmpeg stdout: {result.stdout}")
+            app.logger.error(f"Command used: {' '.join(convert_cmd)}")
             return False, f"FFmpeg conversion failed: {result.stderr}"
         
+        app.logger.info(f"Video conversion successful: {input_path} -> {output_path}")
+        app.logger.info(f"Output dimensions: {new_width}x{new_height}")
         return True, "Video converted successfully"
         
     except Exception as e:
